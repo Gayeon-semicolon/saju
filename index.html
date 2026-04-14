@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>천명 — 사주 × MBTI 운명 분석</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;600&family=Noto+Sans+KR:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --gold:#c9a84c; --gold-l:#e8d490; --gold-xl:#f5edd8;
+  --bg:#080b18; --bg2:#0f1428; --bg3:#14213a; --card:#1b2440;
+  --cream:#f0e6c8; --muted:#8a7a62; --accent:#7ecfcf; --red:#d06050;
+}
+body { background:var(--bg); color:var(--cream); font-family:'Noto Sans KR',sans-serif; min-height:100vh; overflow-x:hidden; }
+
+canvas#bg { position:fixed; inset:0; z-index:0; pointer-events:none; }
+
+.screen { position:relative; z-index:1; min-height:100vh; display:none; flex-direction:column; align-items:center; justify-content:center; padding:40px 20px; animation:fadeUp .55s ease both; }
+.screen.show { display:flex; }
+@keyframes fadeUp { from { opacity:0; transform:translateY(22px); } to { opacity:1; transform:translateY(0); } }
+
+h1 { font-family:'Noto Serif KR',serif; font-size:clamp(2.2rem,7vw,3.8rem); font-weight:300; color:var(--gold); letter-spacing:.25em; line-height:1.2; }
+h2 { font-family:'Noto Serif KR',serif; font-size:clamp(1.3rem,4vw,1.9rem); font-weight:400; color:var(--gold-l); margin-bottom:20px; }
+h3 { font-family:'Noto Serif KR',serif; font-size:1.05rem; color:var(--gold); margin-bottom:6px; }
+p { line-height:1.85; color:var(--cream); font-size:.93rem; }
+
+.sub { color:var(--muted); font-size:.78rem; letter-spacing:.15em; text-transform:uppercase; }
+.divider { width:100px; height:1px; background:linear-gradient(to right,transparent,var(--gold),transparent); margin:14px auto; }
+
+.card { background:var(--card); border:1px solid rgba(201,168,76,.18); border-radius:16px; padding:28px 30px; max-width:580px; width:100%; }
+
+label { display:block; color:var(--muted); font-size:.78rem; letter-spacing:.06em; margin:16px 0 6px; }
+input, select {
+  width:100%; background:var(--bg2); border:1px solid rgba(201,168,76,.22);
+  border-radius:8px; color:var(--cream); padding:11px 14px;
+  font-family:'Noto Sans KR',sans-serif; font-size:.92rem; outline:none; transition:border-color .2s;
+}
+input:focus, select:focus { border-color:var(--gold); }
+select option { background:var(--bg2); }
+.grid3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; }
+
+.btn { display:block; width:100%; margin-top:20px; padding:13px; background:transparent; border:1px solid var(--gold); border-radius:8px; color:var(--gold); font-family:'Noto Serif KR',serif; font-size:.95rem; letter-spacing:.12em; cursor:pointer; transition:all .2s; }
+.btn:hover { background:rgba(201,168,76,.12); }
+.btn.fill { background:var(--gold); color:var(--bg); font-weight:600; border:none; }
+.btn.fill:hover { background:var(--gold-l); }
+.btn.sm { font-size:.82rem; padding:10px; margin-top:8px; letter-spacing:.08em; }
+
+.err { color:#e07868; font-size:.82rem; margin-top:8px; display:none; text-align:center; }
+
+.scroll-area { max-width:620px; width:100%; }
+.prog-bar { width:100%; height:2px; background:rgba(201,168,76,.12); border-radius:2px; margin-bottom:22px; }
+.prog-fill { height:100%; background:var(--gold); border-radius:2px; transition:width .4s ease; }
+
+.q-card { background:var(--bg3); border:1px solid rgba(201,168,76,.13); border-radius:12px; padding:22px 24px; margin-bottom:14px; }
+.q-meta { font-size:.75rem; color:var(--muted); letter-spacing:.08em; margin-bottom:10px; }
+.q-text { font-family:'Noto Serif KR',serif; font-size:.98rem; color:var(--cream); margin-bottom:14px; line-height:1.7; }
+.choice { display:flex; align-items:flex-start; gap:12px; padding:11px 14px; border:1px solid rgba(201,168,76,.13); border-radius:8px; cursor:pointer; margin-bottom:8px; transition:all .2s; font-size:.88rem; line-height:1.5; }
+.choice:hover { border-color:rgba(201,168,76,.4); background:rgba(201,168,76,.05); }
+.choice.sel { border-color:var(--gold); background:rgba(201,168,76,.1); color:var(--gold-xl); }
+.dot { width:16px; height:16px; min-width:16px; border-radius:50%; border:1.5px solid var(--muted); margin-top:2px; transition:all .2s; }
+.choice.sel .dot { border-color:var(--gold); background:var(--gold); }
+
+.spinner { width:56px; height:56px; border:2px solid rgba(201,168,76,.15); border-top-color:var(--gold); border-radius:50%; animation:spin 1s linear infinite; margin:0 auto 24px; }
+@keyframes spin { to { transform:rotate(360deg); } }
+.bounce-row { display:flex; gap:8px; justify-content:center; margin-top:20px; }
+.bounce { width:8px; height:8px; border-radius:50%; background:var(--gold); animation:bop .8s ease infinite; }
+.bounce:nth-child(2){animation-delay:.2s;} .bounce:nth-child(3){animation-delay:.4s;}
+@keyframes bop { 0%,100%{transform:translateY(0);opacity:.3} 50%{transform:translateY(-8px);opacity:1} }
+
+.medallion { width:72px; height:72px; border:1px solid rgba(201,168,76,.35); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 18px; font-family:'Noto Serif KR',serif; font-size:1.7rem; color:var(--gold); position:relative; }
+.medallion::before { content:''; position:absolute; inset:5px; border:1px solid rgba(201,168,76,.18); border-radius:50%; }
+
+.pillars { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin:18px 0; }
+.pillar { background:var(--bg2); border:1px solid rgba(201,168,76,.18); border-radius:11px; padding:14px 6px; text-align:center; }
+.p-label { font-size:.67rem; color:var(--muted); letter-spacing:.07em; margin-bottom:8px; }
+.p-stem { font-family:'Noto Serif KR',serif; font-size:1.55rem; color:var(--gold); }
+.p-branch { font-family:'Noto Serif KR',serif; font-size:1.3rem; color:var(--accent); margin-top:3px; }
+.p-note { font-size:.67rem; color:var(--muted); margin-top:4px; line-height:1.5; }
+
+.mbti-badge { display:inline-block; font-family:'Noto Serif KR',serif; font-size:1.9rem; color:var(--accent); border:1.5px solid rgba(126,207,207,.5); border-radius:12px; padding:8px 28px; margin:10px 0; letter-spacing:.25em; }
+
+.analysis { background:var(--bg2); border-left:3px solid var(--gold); border-radius:0 10px 10px 0; padding:22px 24px; margin:16px 0; line-height:2; font-size:.9rem; white-space:pre-wrap; color:var(--cream); }
+
+@media(max-width:480px) {
+  .pillars { grid-template-columns:repeat(2,1fr); }
+  .card { padding:20px 16px; }
+  .grid3 > div:last-child { grid-column:1/-1; }
+}
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+
+<!-- INTRO -->
+<div class="screen show" id="s0">
+  <div style="text-align:center; max-width:440px;">
+    <div class="medallion">天</div>
+    <div class="sub" style="letter-spacing:.35em; margin-bottom:10px;">CHEONMYEONG</div>
+    <h1>천 명</h1>
+    <div class="divider"></div>
+    <p style="color:var(--muted); margin:20px 0 32px; line-height:2.1; font-size:.9rem;">
+      사주팔자의 우주적 흐름과<br>MBTI 성격 유형을 결합하여<br>당신만의 운명을 해석합니다
+    </p>
+    <button class="btn fill" onclick="go('s1')">분 석 시 작 하 기</button>
+    <p style="margin-top:20px; font-size:.75rem; color:var(--muted); line-height:2;">
+      사주 4주 분석 · MBTI 8문항 · AI 종합 해석
+    </p>
+  </div>
+</div>
+
+<!-- BIRTH INFO -->
+<div class="screen" id="s1">
+  <div class="card">
+    <div class="sub" style="text-align:center; margin-bottom:6px;">STEP 1 / 2</div>
+    <h2 style="text-align:center;">생년월일 입력</h2>
+    <div class="divider"></div>
+    <label>이름 (선택)</label>
+    <input type="text" id="inp-name" placeholder="이름을 입력하세요">
+    <label>성별</label>
+    <select id="inp-gender">
+      <option value="">선택 안함</option>
+      <option value="남성">남성</option>
+      <option value="여성">여성</option>
+    </select>
+    <div class="grid3">
+      <div><label>출생년도</label><input type="number" id="inp-year" placeholder="예: 1998" min="1900" max="2025"></div>
+      <div><label>월</label>
+        <select id="inp-month">
+          <option value="">월</option>
+          <option value="1">1월</option><option value="2">2월</option><option value="3">3월</option>
+          <option value="4">4월</option><option value="5">5월</option><option value="6">6월</option>
+          <option value="7">7월</option><option value="8">8월</option><option value="9">9월</option>
+          <option value="10">10월</option><option value="11">11월</option><option value="12">12월</option>
+        </select>
+      </div>
+      <div><label>일</label><input type="number" id="inp-day" placeholder="일" min="1" max="31"></div>
+    </div>
+    <label>출생 시간 (모르면 미입력)</label>
+    <select id="inp-hour">
+      <option value="-1">모름</option>
+      <option value="0">자시 — 밤 11시~새벽 1시</option>
+      <option value="2">축시 — 새벽 1시~3시</option>
+      <option value="4">인시 — 새벽 3시~5시</option>
+      <option value="6">묘시 — 새벽 5시~7시</option>
+      <option value="8">진시 — 오전 7시~9시</option>
+      <option value="10">사시 — 오전 9시~11시</option>
+      <option value="12">오시 — 오전 11시~오후 1시</option>
+      <option value="14">미시 — 오후 1시~3시</option>
+      <option value="16">신시 — 오후 3시~5시</option>
+      <option value="18">유시 — 오후 5시~7시</option>
+      <option value="20">술시 — 오후 7시~9시</option>
+      <option value="22">해시 — 오후 9시~11시</option>
+    </select>
+    <div class="err" id="birth-err">출생년도, 월, 일을 모두 입력해 주세요.</div>
+    <button class="btn fill" onclick="submitBirth()">다음 — 성격 질문으로 →</button>
+    <button class="btn sm" onclick="go('s0')">← 처음으로</button>
+  </div>
+</div>
+
+<!-- MBTI QUESTIONS -->
+<div class="screen" id="s2" style="justify-content:flex-start; padding-top:56px; padding-bottom:48px;">
+  <div class="scroll-area">
+    <div class="sub" style="text-align:center; margin-bottom:6px;">STEP 2 / 2</div>
+    <h2 style="text-align:center;">성격 유형 질문</h2>
+    <div class="divider"></div>
+    <p style="text-align:center; color:var(--muted); font-size:.83rem; margin-bottom:22px; line-height:1.7;">각 질문에서 자신에게 더 가까운 항목을 선택하세요<br>총 8문항입니다</p>
+    <div class="prog-bar"><div class="prog-fill" id="prog" style="width:0%"></div></div>
+    <div id="q-wrap"></div>
+    <div class="err" id="mbti-err">모든 질문에 답해 주세요.</div>
+    <button class="btn fill" onclick="submitMbti()">운명 분석 시작 ✦</button>
+    <button class="btn sm" onclick="go('s1')">← 돌아가기</button>
+  </div>
+</div>
+
+<!-- LOADING -->
+<div class="screen" id="s3">
+  <div style="text-align:center;">
+    <div class="spinner"></div>
+    <h2 style="margin-bottom:10px;">운명을 해석하는 중...</h2>
+    <p style="color:var(--muted); font-size:.88rem; line-height:2;">사주팔자와 성격 유형을 결합하여<br>당신만의 운명을 분석하고 있습니다</p>
+    <div class="bounce-row"><div class="bounce"></div><div class="bounce"></div><div class="bounce"></div></div>
+  </div>
+</div>
+
+<!-- RESULTS -->
+<div class="screen" id="s4" style="justify-content:flex-start; padding-top:56px; padding-bottom:64px;">
+  <div class="scroll-area">
+    <div style="text-align:center; margin-bottom:28px;">
+      <div class="medallion">命</div>
+      <div class="sub" style="letter-spacing:.25em; margin-bottom:8px;">운명 분석 결과</div>
+      <h1 id="res-title" style="font-size:clamp(1.6rem,5vw,2.6rem);">당신의 천명</h1>
+      <div class="divider"></div>
+    </div>
+    <div class="card" style="margin-bottom:16px;">
+      <h3>사주팔자 (四柱八字)</h3>
+      <p style="color:var(--muted); font-size:.75rem; margin-bottom:2px;">연주 · 월주 · 일주 · 시주</p>
+      <div class="pillars" id="pillars-wrap"></div>
+    </div>
+    <div class="card" style="margin-bottom:16px; text-align:center;">
+      <h3 style="text-align:center; margin-bottom:4px;">MBTI 성격 유형</h3>
+      <div class="mbti-badge" id="mbti-badge"></div>
+      <p id="mbti-desc" style="font-size:.82rem; color:var(--muted); margin-top:4px;"></p>
+    </div>
+    <div class="card">
+      <h3>AI 종합 운명 분석</h3>
+      <div class="divider" style="margin:8px 0 0 0; width:50px;"></div>
+      <div class="analysis" id="analysis-box">분석 중...</div>
+    </div>
+    <button class="btn" onclick="restart()" style="margin-top:16px;">↺ 처음부터 다시 하기</button>
+  </div>
+</div>
+
+<script>
+(function() {
+  const c = document.getElementById('bg'), ctx = c.getContext('2d');
+  function resize() { c.width = innerWidth; c.height = innerHeight; }
+  resize(); window.addEventListener('resize', resize);
+  const stars = Array.from({length:220}, () => ({
+    x:Math.random(), y:Math.random(), r:Math.random()*1.3+0.2,
+    phase:Math.random()*Math.PI*2, speed:Math.random()*0.006+0.002
+  }));
+  let t = 0;
+  function draw() {
+    ctx.clearRect(0,0,c.width,c.height);
+    stars.forEach(s => {
+      const op = 0.15+0.55*(0.5+0.5*Math.sin(s.phase+t*s.speed));
+      ctx.beginPath(); ctx.arc(s.x*c.width,s.y*c.height,s.r,0,Math.PI*2);
+      ctx.fillStyle=`rgba(255,255,255,${op})`; ctx.fill();
+    });
+    t++; requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+function go(id) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('show'));
+  document.getElementById(id).classList.add('show');
+  window.scrollTo(0,0);
+}
+
+const STEMS  =['갑','을','병','정','무','기','경','신','임','계'];
+const BRANCH =['자','축','인','묘','진','사','오','미','신','유','술','해'];
+const ANIMALS=['쥐','소','호랑이','토끼','용','뱀','말','양','원숭이','닭','개','돼지'];
+const S_ELEM =['목(木)','목(木)','화(Fire)','화(火)','토(土)','토(土)','금(金)','금(金)','수(水)','수(水)'];
+const B_ELEM =['수(水)','토(土)','목(木)','목(木)','토(土)','화(火)','화(火)','토(土)','금(金)','금(金)','토(土)','수(水)'];
+
+function calcSaju(year, month, day, hourVal) {
+  const ysi=((year-4)%10+10)%10, ybi=((year-4)%12+12)%12;
+  const mbi=(month+1)%12;
+  const msbase=[2,4,6,8,0][Math.floor(ysi/2)];
+  const msi=(msbase+(month-1))%10;
+  const diff=Math.round((Date.UTC(year,month-1,day)-Date.UTC(2000,0,1))/86400000);
+  const dsi=((diff%10)+10)%10, dbi=(((diff+4)%12)+12)%12;
+  let hsi=-1,hbi=-1;
+  if(hourVal>=0){
+    hbi=(hourVal>=23||hourVal<1)?0:Math.floor((hourVal+1)/2);
+    hsi=([0,2,4,6,8][dsi%5]+hbi)%10;
+  }
+  return [
+    {label:'연주',sub:'연',stem:STEMS[ysi],branch:BRANCH[ybi],animal:ANIMALS[ybi],se:S_ELEM[ysi],be:B_ELEM[ybi]},
+    {label:'월주',sub:'월',stem:STEMS[msi],branch:BRANCH[mbi],animal:ANIMALS[mbi],se:S_ELEM[msi],be:B_ELEM[mbi]},
+    {label:'일주',sub:'일',stem:STEMS[dsi],branch:BRANCH[dbi],animal:ANIMALS[dbi],se:S_ELEM[dsi],be:B_ELEM[dbi]},
+    hsi>=0
+      ?{label:'시주',sub:'시',stem:STEMS[hsi],branch:BRANCH[hbi],animal:ANIMALS[hbi],se:S_ELEM[hsi],be:B_ELEM[hbi]}
+      :{label:'시주',sub:'시',stem:'?',branch:'?',animal:'미상',se:'',be:''}
+  ];
+}
+
+const QS=[
+  {dim:'E/I',q:'오랜 하루를 보낸 후, 에너지를 회복하는 방법은?',
+   a:[{t:'혼자만의 시간을 갖고 조용히 휴식을 취한다',v:'I'},{t:'친구나 가족과 어울리며 대화를 나눈다',v:'E'}]},
+  {dim:'E/I',q:'낯선 모임에서 나는 주로...',
+   a:[{t:'먼저 다가가 여러 사람과 활발히 어울린다',v:'E'},{t:'마음 맞는 소수와 깊이 있는 대화를 나눈다',v:'I'}]},
+  {dim:'N/S',q:'새로운 일을 시작할 때 나는...',
+   a:[{t:'큰 그림과 미래의 가능성을 먼저 상상한다',v:'N'},{t:'현실적이고 구체적인 방법을 먼저 생각한다',v:'S'}]},
+  {dim:'N/S',q:'무언가를 이해할 때 더 잘 와닿는 방식은?',
+   a:[{t:'개념 사이의 연결 고리와 패턴을 스스로 찾는 것',v:'N'},{t:'구체적인 예시와 단계적인 설명으로 따라가는 것',v:'S'}]},
+  {dim:'T/F',q:'친구가 힘든 고민을 털어놓을 때 나는...',
+   a:[{t:'논리적인 해결책과 실질적인 조언을 제시한다',v:'T'},{t:'먼저 충분히 공감하며 감정을 들어준다',v:'F'}]},
+  {dim:'T/F',q:'중요한 결정을 내릴 때 나는...',
+   a:[{t:'감정보다 논리, 원칙, 객관적 사실을 중시한다',v:'T'},{t:'관련된 사람들의 감정과 관계의 조화를 중시한다',v:'F'}]},
+  {dim:'J/P',q:'여행이나 행사를 앞두고 나는...',
+   a:[{t:'미리 세세한 일정과 계획을 세우는 것이 편하다',v:'J'},{t:'즉흥적으로 자유롭게 흘러가는 것을 선호한다',v:'P'}]},
+  {dim:'J/P',q:'마감 기한에 대한 나의 태도는?',
+   a:[{t:'미리 끝내두어야 마음이 편하다',v:'J'},{t:'막판이 되어야 집중력이 올라오는 편이다',v:'P'}]}
+];
+
+const MBTI_NAMES={
+  INTJ:'전략가',INTP:'논리술사',ENTJ:'통솔자',ENTP:'변론가',
+  INFJ:'선지자',INFP:'중재자',ENFJ:'선도자',ENFP:'활동가',
+  ISTJ:'현실주의자',ISFJ:'수호자',ESTJ:'경영자',ESFJ:'집정관',
+  ISTP:'장인',ISFP:'모험가',ESTP:'사업가',ESFP:'연예인'
+};
+
+let ans={}, bData={};
+
+function buildQ() {
+  const wrap=document.getElementById('q-wrap'); wrap.innerHTML='';
+  QS.forEach((q,i)=>{
+    const d=document.createElement('div'); d.className='q-card';
+    d.innerHTML=`<div class="q-meta">Q${i+1} · ${q.dim}</div>
+<div class="q-text">${q.q}</div>
+${q.a.map(a=>`<div class="choice" data-qi="${i}" data-val="${a.v}" onclick="pick(${i},'${a.v}',this)">
+<div class="dot"></div><span>${a.t}</span></div>`).join('')}`;
+    wrap.appendChild(d);
+  });
+}
+
+function pick(qi,val,el){
+  ans[qi]=val;
+  document.querySelectorAll(`.choice[data-qi="${qi}"]`).forEach(c=>c.classList.remove('sel'));
+  el.classList.add('sel');
+  document.getElementById('prog').style.width=(Object.keys(ans).length/QS.length*100)+'%';
+}
+
+function getMbti(){
+  const c={E:0,I:0,N:0,S:0,T:0,F:0,J:0,P:0};
+  Object.values(ans).forEach(v=>c[v]++);
+  return (c.E>=c.I?'E':'I')+(c.N>=c.S?'N':'S')+(c.T>=c.F?'T':'F')+(c.J>=c.P?'J':'P');
+}
+
+function submitBirth(){
+  const year=parseInt(document.getElementById('inp-year').value);
+  const month=parseInt(document.getElementById('inp-month').value);
+  const day=parseInt(document.getElementById('inp-day').value);
+  const err=document.getElementById('birth-err');
+  if(!year||!month||!day||year<1900||year>2025||day<1||day>31){err.style.display='block';return;}
+  err.style.display='none';
+  bData={
+    name:document.getElementById('inp-name').value.trim()||'',
+    gender:document.getElementById('inp-gender').value||'미상',
+    year,month,day,hourVal:parseInt(document.getElementById('inp-hour').value)
+  };
+  go('s2');
+}
+
+function submitMbti(){
+  if(Object.keys(ans).length<QS.length){document.getElementById('mbti-err').style.display='block';return;}
+  document.getElementById('mbti-err').style.display='none';
+  go('s3'); runAnalysis();
+}
+
+async function runAnalysis(){
+  const {name,gender,year,month,day,hourVal}=bData;
+  const pillars=calcSaju(year,month,day,hourVal);
+  const mbti=getMbti();
+  const mbtiName=MBTI_NAMES[mbti]||'';
+
+  document.getElementById('res-title').textContent=name?name+'의 천명':'당신의 천명';
+  document.getElementById('mbti-badge').textContent=mbti;
+  document.getElementById('mbti-desc').textContent=mbtiName?`${mbtiName} 유형`:'';
+
+  document.getElementById('pillars-wrap').innerHTML=pillars.map(p=>`
+    <div class="pillar">
+      <div class="p-label">${p.sub}</div>
+      <div class="p-stem">${p.stem}</div>
+      <div class="p-branch">${p.branch}</div>
+      <div class="p-note">${p.animal}${p.se?'<br>'+p.se.split('(')[0]:''}</div>
+    </div>`).join('');
+
+  const hourStr=hourVal>=0
+    ?`시주: ${pillars[3].stem}${pillars[3].branch} (${pillars[3].animal}띠)`
+    :'시주: 알 수 없음';
+
+  const prompt=`당신은 사주명리학과 심리학에 깊이 정통한 전문 상담사입니다.
+다음 정보를 바탕으로 따뜻하고 깊이 있는 한국어 운명 분석을 작성해 주세요.
+
+【기본 정보】
+이름: ${name||'미입력'} | 성별: ${gender} | 생년월일: ${year}년 ${month}월 ${day}일
+
+【사주팔자】
+연주(年柱): ${pillars[0].stem}${pillars[0].branch}년 — ${pillars[0].animal}띠, ${pillars[0].se} / ${pillars[0].be}
+월주(月柱): ${pillars[1].stem}${pillars[1].branch}월 — ${pillars[1].se} / ${pillars[1].be}
+일주(日柱): ${pillars[2].stem}${pillars[2].branch}일 — ${pillars[2].se} / ${pillars[2].be}
+${hourStr}
+
+【MBTI 성격 유형】
+${mbti} (${mbtiName})
+
+아래 네 가지 항목으로 나누어, 각 항목에 소제목(이모지 포함)을 붙이고 2~3문단씩 작성해 주세요.
+사주의 오행·천간·지지 해석과 MBTI 특성을 유기적으로 연결하여 입체적이고 통찰력 있게 분석해 주세요.
+
+1. 🌳 타고난 기운과 성품
+2. 🪞 내면의 빛과 강점 (사주 × MBTI 교차 분석)
+3. 💫 인연과 삶의 흐름
+4. ✨ 2025년 조언
+
+분석은 비판적이지 않고 따뜻하며, 총 700~900자 내외로 작성해 주세요.`;
+
+  try {
+    const res=await fetch('/api/analyze',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:1000,
+        messages:[{role:'user',content:prompt}]
+      })
+    });
+    const data=await res.json();
+    const text=(data.content||[]).map(c=>c.text||'').join('')||'분석 결과를 가져오지 못했습니다.';
+    go('s4');
+    document.getElementById('analysis-box').textContent=text;
+  } catch(e) {
+    go('s4');
+    document.getElementById('analysis-box').textContent='분석 중 오류가 발생했습니다.\n\n'+e.message;
+  }
+}
+
+function restart(){
+  ans={}; bData={};
+  ['inp-name','inp-year','inp-day'].forEach(id=>document.getElementById(id).value='');
+  ['inp-gender','inp-month','inp-hour'].forEach(id=>document.getElementById(id).selectedIndex=0);
+  document.getElementById('prog').style.width='0%';
+  buildQ(); go('s0');
+}
+
+buildQ();
+</script>
+</body>
+</html>
